@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Planner & Grocery List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Meal Planner & Grocery List</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <label for="weekSelect" class="form-label">Select Week:</label>
+                <input type="text" id="weekSelect" class="form-control" readonly>
+                <div id="calendar" class="mt-2"></div>
+            </div>
+        </div>
+
+        <form method="POST" action="/save_week">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Monday</div>
+                        <div class="card-body">
+                            <input type="text" name="monday" class="form-control mb-2" placeholder="Enter meal">
+                            <textarea name="monday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Tuesday</div>
+                        <div class="card-body">
+                            <input type="text" name="tuesday" class="form-control mb-2" placeholder="Enter meal">
+                            <textarea name="tuesday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Wednesday</div>
+                        <div class="card-body">
+                            <input type="text" name="wednesday" class="form-control mb-2" placeholder="Enter meal">
+                            <textarea name="wednesday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Thursday</div>
+                        <div class="card-body">
+                            <input type="text" name="thursday" class="form-control mb-2" placeholder="Enter meal">
+                            <textarea name="thursday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Friday</div>
+                        <div class="card-body">
+                            <input type="text" name="friday" class="form-control mb-2" placeholder="Enter meal">
+                            <textarea name="friday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Saturday</div>
+                        <div class="card-body">
+                            <input type="text" name="saturday" class="form-control mb-2" placeholder="Enter meal">
+                            <textarea name="saturday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Sunday</div>
+                        <div class="card-body">
+                            <input type="text" name="sunday" class="form-control mb-2" placeholder="Enter meal">
+                            <textarea name="sunday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card mb-3">
+                        <div class="card-header">Additional Shopping List Items</div>
+                        <div class="card-body">
+                            <textarea name="additional_items" class="form-control" rows="5" placeholder="Additional items (one per line)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <input type="hidden" name="week" id="weekInput">
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary w-100">Save Week</button>
+                </div>
+                <div class="col-md-6">
+                    <button type="button" class="btn btn-success w-100" onclick="downloadShoppingList()">Download Shopping List</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const calendar = document.getElementById('calendar');
+        const weekSelect = document.getElementById('weekSelect');
+        const weekInput = document.getElementById('weekInput');
+        
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+        
+        function getMonday(d) {
+            d = new Date(d);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setDate(diff));
+        }
+        
+        function renderCalendar(year, month) {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDay = firstDay.getDay();
+            
+            let html = `<div class="card"><div class="card-body">`;
+            html += `<div class="d-flex justify-content-between mb-3">`;
+            html += `<button type="button" class="btn btn-sm btn-secondary" onclick="changeMonth(-1)">←</button>`;
+            html += `<strong>${firstDay.toLocaleString('default', { month: 'long', year: 'numeric' })}</strong>`;
+            html += `<button type="button" class="btn btn-sm btn-secondary" onclick="changeMonth(1)">→</button>`;
+            html += `</div>`;
+            html += `<table class="table table-bordered table-sm"><thead><tr>`;
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+                html += `<th class="text-center">${day}</th>`;
+            });
+            html += `</tr></thead><tbody><tr>`;
+            
+            for (let i = 0; i < startDay; i++) {
+                html += `<td></td>`;
+            }
+            
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const monday = getMonday(date);
+                const weekNum = getWeekNumber(date);
+                const weekStr = `${monday.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+                
+                html += `<td class="text-center" style="cursor:pointer" onclick="selectWeek('${weekStr}', '${monday.toLocaleDateString()}')">${day}</td>`;
+                
+                if ((startDay + day) % 7 === 0 && day !== daysInMonth) {
+                    html += `</tr><tr>`;
+                }
+            }
+            
+            html += `</tr></tbody></table></div></div>`;
+            calendar.innerHTML = html;
+        }
+        
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+        
+        function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            } else if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar(currentYear, currentMonth);
+        }
+        
+        function selectWeek(weekStr, mondayStr) {
+            // Here we will change to also get info to fill all forms
+            weekSelect.value = `Week starting ${mondayStr}`;
+            weekInput.value = weekStr;
+
+            fetch(`${window.location.href}get_week_items?week=${weekInput.value}`).then(resp => {
+                if (resp.status != 200) {
+                    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                    days.forEach(day => {
+                        document.querySelector(`input[name="${day}"]`).value = '';
+                        document.querySelector(`textarea[name="${day}_ingredients"]`).value = '';
+                    });
+                    document.querySelector('textarea[name="additional_items"]').value = '';
+                    return;
+                }
+
+                resp.json().then(mealWeekData => {
+                    console.log(mealWeekData);
+                    
+                    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                    days.forEach(day => {
+                        document.querySelector(`input[name="${day}"]`).value = mealWeekData[day] || '';
+                        document.querySelector(`textarea[name="${day}_ingredients"]`).value = mealWeekData[`${day}_ingredients`] || '';
+                    });
+                    document.querySelector('textarea[name="additional_items"]').value = mealWeekData['additional_items'] || '';
+                });
+            });
+
+        }
+        
+        function downloadShoppingList() {
+            if (!weekInput.value) {
+                alert('Please select a week first');
+                return;
+            }
+            window.location.href = `/download_shopping_list?week=${weekInput.value}`;
+        }
+        
+        renderCalendar(currentYear, currentMonth);
+    </script>
+</body>
+</html>

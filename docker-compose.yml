@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  meal-planner:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_FILE=/app/data/meals.json
+    restart: unless-stopped
