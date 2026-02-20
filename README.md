@@ -5,13 +5,14 @@ Simple Flask app to plan weekly meals, manage pantry/shopping items, and export 
 ## Features
 - Select a week via calendar UI
 - Enter meals and per-day ingredient lists
-- Save/load weekly plans (JSON-backed)
+- Save/load weekly plans (PostgreSQL-backed)
 - Add additional shopping items
 - Export consolidated shopping list as a PDF
 
 ## Prerequisites
 - Python 3.11+
 - pip
+- PostgreSQL database
 - Optional: Docker
 
 ## Quick start (local)
@@ -20,9 +21,12 @@ Simple Flask app to plan weekly meals, manage pantry/shopping items, and export 
     - python -m venv .venv
     - source .venv/bin/activate
     - pip install -r requirements.txt
-3. Set DB file location (example):
-    - export DATABASE_FILE=/path/to/meals.json
-    - mkdir -p $(dirname /path/to/meals.json) && echo "[]" > /path/to/meals.json
+3. Set database connection environment variables:
+    - export DB_HOST=localhost
+    - export DB_NAME=meal_planner
+    - export DB_USER=postgres
+    - export DB_PASSWORD=your_password
+    - export DB_PORT=5432
 4. Start app (development):
     - export FLASK_APP=app.py
     - flask run --host=0.0.0.0 --port=5000
@@ -34,16 +38,18 @@ Or run with gunicorn (production-style):
 ## Docker
 Build and run:
 - docker build -t meal-planner .
-- docker run -p 5000:5000 -v $(pwd)/data:/app/data -e DATABASE_FILE=/app/data/meals.json meal-planner
-
-Ensure the host `data` directory exists so the JSON persists.
+- docker run -p 5000:5000 -e DB_HOST=your_host -e DB_NAME=meal_planner -e DB_USER=postgres -e DB_PASSWORD=your_password meal-planner
 
 ## Environment
-- DATABASE_FILE - path to JSON file used by DataHandler (required)
+- DB_HOST - PostgreSQL host (required)
+- DB_NAME - PostgreSQL database name (required)
+- DB_USER - PostgreSQL username (required)
+- DB_PASSWORD - PostgreSQL password (required)
+- DB_PORT - PostgreSQL port (default: 5432)
 
 ## Data storage
-- JSON array of week objects stored at DATABASE_FILE.
-- Each object includes `week` (e.g., "2023-W05"), day fields (`monday`, `monday_ingredients`, ...) and `additional_items`.
+- PostgreSQL database with meal_weeks table.
+- Each row includes `week` (e.g., "2023-W05") as primary key and `data` as JSONB containing day fields (`monday`, `monday_ingredients`, ...) and `additional_items`.
 
 ## API / Endpoints
 - GET / — web UI
@@ -54,12 +60,6 @@ Ensure the host `data` directory exists so the JSON persists.
 ## Project layout
 - app.py — Flask application
 - templates/index.html — frontend UI
-- src/data_handling.py — JSON persistence
+- src/data_handling.py — PostgreSQL persistence
 - Dockerfile — container image
 - requirements.txt
-
-## Contributing
-PRs and issues welcome. Keep changes small and include tests where applicable.
-
-## License
-MIT License

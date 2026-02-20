@@ -6,17 +6,23 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import inch
 from io import BytesIO
 
-from src.data_handling import DataHandler
+from src.data_handling import MealDB
 
 # Initialize the Flask app and load the environment variables
 load_dotenv()
 app = Flask(__name__)
 
-# Init the data handler from the environment variables
-if not (database_file := os.getenv("DATABASE_FILE")):
-    raise Exception("No database file specified")
-dh = DataHandler(database_file)
-del database_file
+if not (db_host := os.getenv("DB_HOST")):
+    raise Exception("No database host specified")
+if not (db_name := os.getenv("DB_NAME")):
+    raise Exception("No database name specified")
+if not (db_user := os.getenv("DB_USER")):
+    raise Exception("No database user specified")
+if not (db_password := os.getenv("DB_PASSWORD")):
+    raise Exception("No database password specified")
+db_port = int(os.getenv("DB_PORT", "5432"))
+dh = MealDB(db_host, db_name, db_user, db_password, db_port)
+del db_host, db_name, db_user, db_password, db_port
 
 # Default route to main page
 @app.route('/')
