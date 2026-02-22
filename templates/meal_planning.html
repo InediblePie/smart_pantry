@@ -18,7 +18,10 @@
                 <div class="card-header">Monday</div>
                 <div class="card-body">
                     <input type="text" name="monday" class="form-control mb-2" placeholder="Enter meal">
-                    <textarea name="monday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                    <input type="url" name="monday_recipe" class="form-control mb-2" placeholder="Recipe link (optional)">
+                    <label class="form-label">Ingredients:</label>
+                    <div id="monday_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('monday')">+ Add Ingredient</button>
                 </div>
             </div>
         </div>
@@ -30,7 +33,10 @@
                 <div class="card-header">Tuesday</div>
                 <div class="card-body">
                     <input type="text" name="tuesday" class="form-control mb-2" placeholder="Enter meal">
-                    <textarea name="tuesday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                    <input type="url" name="tuesday_recipe" class="form-control mb-2" placeholder="Recipe link (optional)">
+                    <label class="form-label">Ingredients:</label>
+                    <div id="tuesday_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('tuesday')">+ Add Ingredient</button>
                 </div>
             </div>
         </div>
@@ -42,7 +48,10 @@
                 <div class="card-header">Wednesday</div>
                 <div class="card-body">
                     <input type="text" name="wednesday" class="form-control mb-2" placeholder="Enter meal">
-                    <textarea name="wednesday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                    <input type="url" name="wednesday_recipe" class="form-control mb-2" placeholder="Recipe link (optional)">
+                    <label class="form-label">Ingredients:</label>
+                    <div id="wednesday_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('wednesday')">+ Add Ingredient</button>
                 </div>
             </div>
         </div>
@@ -54,7 +63,10 @@
                 <div class="card-header">Thursday</div>
                 <div class="card-body">
                     <input type="text" name="thursday" class="form-control mb-2" placeholder="Enter meal">
-                    <textarea name="thursday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                    <input type="url" name="thursday_recipe" class="form-control mb-2" placeholder="Recipe link (optional)">
+                    <label class="form-label">Ingredients:</label>
+                    <div id="thursday_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('thursday')">+ Add Ingredient</button>
                 </div>
             </div>
         </div>
@@ -66,7 +78,10 @@
                 <div class="card-header">Friday</div>
                 <div class="card-body">
                     <input type="text" name="friday" class="form-control mb-2" placeholder="Enter meal">
-                    <textarea name="friday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                    <input type="url" name="friday_recipe" class="form-control mb-2" placeholder="Recipe link (optional)">
+                    <label class="form-label">Ingredients:</label>
+                    <div id="friday_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('friday')">+ Add Ingredient</button>
                 </div>
             </div>
         </div>
@@ -78,7 +93,10 @@
                 <div class="card-header">Saturday</div>
                 <div class="card-body">
                     <input type="text" name="saturday" class="form-control mb-2" placeholder="Enter meal">
-                    <textarea name="saturday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                    <input type="url" name="saturday_recipe" class="form-control mb-2" placeholder="Recipe link (optional)">
+                    <label class="form-label">Ingredients:</label>
+                    <div id="saturday_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('saturday')">+ Add Ingredient</button>
                 </div>
             </div>
         </div>
@@ -90,7 +108,10 @@
                 <div class="card-header">Sunday</div>
                 <div class="card-body">
                     <input type="text" name="sunday" class="form-control mb-2" placeholder="Enter meal">
-                    <textarea name="sunday_ingredients" class="form-control" rows="3" placeholder="Ingredients (one per line)"></textarea>
+                    <input type="url" name="sunday_recipe" class="form-control mb-2" placeholder="Recipe link (optional)">
+                    <label class="form-label">Ingredients:</label>
+                    <div id="sunday_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('sunday')">+ Add Ingredient</button>
                 </div>
             </div>
         </div>
@@ -123,6 +144,83 @@
     const calendar = document.getElementById('calendar');
     const weekSelect = document.getElementById('weekSelect');
     const weekInput = document.getElementById('weekInput');
+    
+    function addIngredient(day) {
+        const list = document.getElementById(`${day}_ingredients_list`);
+        const index = list.children.length;
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2';
+        div.innerHTML = `
+            <input type="text" class="form-control ingredient-search" placeholder="Search item name" autocomplete="off" data-day="${day}" data-index="${index}">
+            <input type="number" name="${day}_ingredients[]" class="form-control" placeholder="Item ID" readonly style="background-color: #e9ecef;">
+            <button type="button" class="btn btn-danger" onclick="removeIngredient(this)">×</button>
+        `;
+        list.appendChild(div);
+        
+        const searchInput = div.querySelector('.ingredient-search');
+        setupAutocomplete(searchInput, day, index);
+    }
+    
+    function setupAutocomplete(input, day, index) {
+        let timeout = null;
+        let resultsDiv = null;
+        
+        input.addEventListener('input', function() {
+            clearTimeout(timeout);
+            const query = this.value;
+            
+            if (query.length < 2) {
+                if (resultsDiv) resultsDiv.remove();
+                return;
+            }
+            
+            timeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/pantry/directory/search?q=${encodeURIComponent(query)}`);
+                    const results = await response.json();
+                    
+                    if (resultsDiv) resultsDiv.remove();
+                    
+                    if (results.length > 0) {
+                        resultsDiv = document.createElement('div');
+                        resultsDiv.className = 'list-group position-absolute';
+                        resultsDiv.style.zIndex = '1000';
+                        resultsDiv.style.maxHeight = '200px';
+                        resultsDiv.style.overflowY = 'auto';
+                        resultsDiv.style.width = input.offsetWidth + 'px';
+                        
+                        results.forEach(item => {
+                            const resultItem = document.createElement('button');
+                            resultItem.type = 'button';
+                            resultItem.className = 'list-group-item list-group-item-action';
+                            resultItem.textContent = item.name;
+                            resultItem.onclick = () => {
+                                input.value = item.name;
+                                input.nextElementSibling.value = item.id;
+                                resultsDiv.remove();
+                            };
+                            resultsDiv.appendChild(resultItem);
+                        });
+                        
+                        input.parentElement.style.position = 'relative';
+                        input.parentElement.appendChild(resultsDiv);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }, 300);
+        });
+        
+        input.addEventListener('blur', function() {
+            setTimeout(() => {
+                if (resultsDiv) resultsDiv.remove();
+            }, 200);
+        });
+    }
+    
+    function removeIngredient(btn) {
+        btn.parentElement.remove();
+    }
     
     function getWeekNumber(date) {
         const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -202,7 +300,8 @@
                 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                 days.forEach(day => {
                     document.querySelector(`input[name="${day}"]`).value = '';
-                    document.querySelector(`textarea[name="${day}_ingredients"]`).value = '';
+                    document.querySelector(`input[name="${day}_recipe"]`).value = '';
+                    document.getElementById(`${day}_ingredients_list`).innerHTML = '';
                 });
                 document.querySelector('textarea[name="additional_items"]').value = '';
                 return;
@@ -214,7 +313,35 @@
                 const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                 days.forEach(day => {
                     document.querySelector(`input[name="${day}"]`).value = mealWeekData[day] || '';
-                    document.querySelector(`textarea[name="${day}_ingredients"]`).value = mealWeekData[`${day}_ingredients`] || '';
+                    document.querySelector(`input[name="${day}_recipe"]`).value = mealWeekData[`${day}_recipe`] || '';
+                    
+                    const ingredientsList = document.getElementById(`${day}_ingredients_list`);
+                    ingredientsList.innerHTML = '';
+                    const ingredients = mealWeekData[`${day}_ingredients`];
+                    if (ingredients && Array.isArray(ingredients)) {
+                        ingredients.forEach(async (itemId, index) => {
+                            addIngredient(day);
+                            const container = ingredientsList.lastElementChild;
+                            const idInput = container.querySelector('input[type="number"]');
+                            const nameInput = container.querySelector('.ingredient-search');
+                            idInput.value = itemId;
+                            
+                            // Fetch item name
+                            try {
+                                const response = await fetch('/pantry/directory/get_item', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                                    body: `item_id=${itemId}`
+                                });
+                                const data = await response.json();
+                                if (data.name) {
+                                    nameInput.value = data.name;
+                                }
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        });
+                    }
                 });
                 document.querySelector('textarea[name="additional_items"]').value = mealWeekData['additional_items'] || '';
             });

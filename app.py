@@ -35,17 +35,24 @@ def index():
 # Route to save the week's meals
 @app.route("/save_week", methods=["POST"])
 def save_week():
-    week = None
-    meals = {}
-
-    for item in request.form.items():
-        if item[0] == "week":
-            week = item[1]
-        else:
-            meals[item[0]] = item[1]
-    
+    week = request.form.get("week")
     if not week:
         raise Exception("No week specified")
+    
+    meals = {}
+    days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    
+    # Handle regular form fields
+    for key in request.form.keys():
+        if key == "week" or key.endswith('_ingredients[]'):
+            continue
+        meals[key] = request.form.get(key)
+    
+    # Handle ingredient arrays
+    for day in days:
+        ingredients = request.form.getlist(f"{day}_ingredients[]")
+        if ingredients:
+            meals[f"{day}_ingredients"] = ingredients
     
     mdb.save_week(week, meals)
     return redirect(url_for('index'))
@@ -161,6 +168,33 @@ def delete_pantry_directory_item():
     item_id = int(item_id)
     pddb.delete_item(item_id)
     return redirect(url_for('pantry_intake'))
+
+@app.route('/pantry/directory/get_item', methods=['POST'])
+def get_pantry_directory_item():
+    from flask import jsonify
+    item_id = request.form.get('item_id')
+    
+    if not item_id:
+        return jsonify({'name': None})
+    
+    item_id = int(item_id)
+    item = pddb.get_item_by_id(item_id)
+    
+    if item:
+        return jsonify({'name': item['name']})
+    return jsonify({'name': None})
+
+@app.route('/pantry/directory/search', methods=['GET'])
+def search_pantry_directory():
+    from flask import jsonify
+    query = request.args.get('q', '').lower()
+    
+    if not query:
+        return jsonify([])
+    
+    items = pddb.get_all_items()
+    results = [{'id': item['id'], 'name': item['name']} for item in items if query in item['name'].lower()]
+    return jsonify(results[:10])  # Limit to 10 results
 
 # Route to download the shopping list as a PDF
 @app.route("/download_shopping_list")

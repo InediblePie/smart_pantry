@@ -11,8 +11,10 @@
             <div class="card-body">
                 <form method="POST" action="/pantry/intake/add">
                     <div class="mb-3">
-                        <label for="itemId" class="form-label">Item ID</label>
-                        <input type="number" class="form-control" id="itemId" name="item_id" required placeholder="Enter 10-digit item ID">
+                        <label for="itemSearch" class="form-label">Item Name</label>
+                        <input type="text" class="form-control" id="itemSearch" autocomplete="off" placeholder="Search for item" required>
+                        <input type="hidden" name="item_id" id="itemIdHidden" required>
+                        <div id="searchResults" class="list-group mt-2" style="max-height: 200px; overflow-y: auto;"></div>
                     </div>
                     <div class="mb-3">
                         <label for="expirationDate" class="form-label">Expiration Date</label>
@@ -109,6 +111,50 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    const itemSearch = document.getElementById('itemSearch');
+    const itemIdHidden = document.getElementById('itemIdHidden');
+    const searchResults = document.getElementById('searchResults');
+    let timeout = null;
+    
+    itemSearch.addEventListener('input', function() {
+        clearTimeout(timeout);
+        const query = this.value;
+        
+        if (query.length < 2) {
+            searchResults.innerHTML = '';
+            itemIdHidden.value = '';
+            return;
+        }
+        
+        timeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`/pantry/directory/search?q=${encodeURIComponent(query)}`);
+                const results = await response.json();
+                
+                searchResults.innerHTML = '';
+                
+                if (results.length > 0) {
+                    results.forEach(item => {
+                        const resultItem = document.createElement('button');
+                        resultItem.type = 'button';
+                        resultItem.className = 'list-group-item list-group-item-action';
+                        resultItem.textContent = `${item.name} (ID: ${item.id})`;
+                        resultItem.onclick = () => {
+                            itemSearch.value = item.name;
+                            itemIdHidden.value = item.id;
+                            searchResults.innerHTML = '';
+                        };
+                        searchResults.appendChild(resultItem);
+                    });
+                } else {
+                    searchResults.innerHTML = '<div class="list-group-item">No items found</div>';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }, 300);
+    });
+    
     function filterItems() {
         const searchValue = document.getElementById('directorySearch').value.toLowerCase();
         const rows = document.querySelectorAll('#directoryList tr');
