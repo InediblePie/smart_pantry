@@ -8,6 +8,10 @@ Simple Flask app to plan weekly meals, manage pantry/shopping items, and export 
 - Save/load weekly plans (PostgreSQL-backed)
 - Add additional shopping items
 - Export consolidated shopping list as a PDF
+- Manage pantry inventory with expiration tracking
+- Pantry directory with unique item IDs
+- Item intake system for adding items to pantry
+- Search, sort, and filter pantry items
 
 ## Prerequisites
 - Python 3.11+
@@ -48,18 +52,32 @@ Build and run:
 - DB_PORT - PostgreSQL port (default: 5432)
 
 ## Data storage
-- PostgreSQL database with meal_weeks table.
-- Each row includes `week` (e.g., "2023-W05") as primary key and `data` as JSONB containing day fields (`monday`, `monday_ingredients`, ...) and `additional_items`.
+- PostgreSQL database with three tables:
+  - meal_weeks: Stores weekly meal plans with `week` as primary key and `data` as JSONB
+  - pantry_directory: Stores item definitions with random 10-digit IDs, name, and category
+  - pantry: Stores actual pantry inventory with serial numbers, item references, and expiration dates
 
 ## API / Endpoints
-- GET / — web UI
+- GET / — meal planning web UI
 - POST /save_week — form submit to save a week
 - GET /get_week_items?week=<week> — returns JSON for a week
 - GET /download_shopping_list?week=<week> — returns shopping list PDF
+- GET /pantry/intake — pantry intake and directory management UI
+- POST /pantry/intake/add — add item to pantry
+- POST /pantry/directory/add — add item to directory
+- POST /pantry/directory/delete — delete item from directory
+- GET /pantry — pantry inventory view
+- POST /pantry/get_by_serial — lookup item by serial number
+- POST /pantry/get_count — get count of items by ID
+- POST /pantry/delete — delete item from pantry
 
 ## Project layout
 - app.py — Flask application
-- templates/index.html — frontend UI
-- src/data_handling.py — PostgreSQL persistence
+- templates/
+  - base.html — base template with navigation
+  - meal_planning.html — weekly meal planner UI
+  - pantry_intake.html — item intake and directory management
+  - pantry_view.html — pantry inventory view
+- src/data_handling.py — PostgreSQL persistence (MealDB, PantryDirectoryDB, PantryDB)
 - Dockerfile — container image
 - requirements.txt
