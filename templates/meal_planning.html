@@ -122,7 +122,9 @@
             <div class="card mb-3">
                 <div class="card-header">Additional Shopping List Items</div>
                 <div class="card-body">
-                    <textarea name="additional_items" class="form-control" rows="5" placeholder="Additional items (one per line)"></textarea>
+                    <label class="form-label">Items:</label>
+                    <div id="additional_ingredients_list"></div>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="addIngredient('additional')">+ Add Item</button>
                 </div>
             </div>
         </div>
@@ -151,8 +153,9 @@
         const div = document.createElement('div');
         div.className = 'input-group mb-2';
         div.innerHTML = `
-            <input type="text" class="form-control ingredient-search" placeholder="Search item name" autocomplete="off" data-day="${day}" data-index="${index}">
-            <input type="number" name="${day}_ingredients[]" class="form-control" placeholder="Item ID" readonly style="background-color: #e9ecef;">
+            <input type="text" class="form-control ingredient-search" placeholder="Search item name" autocomplete="off" data-day="${day}" data-index="${index}" style="flex: 2;">
+            <input type="number" name="${day}_ingredients[]" class="form-control" placeholder="Item ID" readonly style="background-color: #e9ecef; flex: 1;">
+            <input type="number" name="${day}_quantities[]" class="form-control" placeholder="Qty" min="1" value="1" style="flex: 0 0 80px;">
             <button type="button" class="btn btn-danger" onclick="removeIngredient(this)">×</button>
         `;
         list.appendChild(div);
@@ -303,7 +306,7 @@
                     document.querySelector(`input[name="${day}_recipe"]`).value = '';
                     document.getElementById(`${day}_ingredients_list`).innerHTML = '';
                 });
-                document.querySelector('textarea[name="additional_items"]').value = '';
+                document.getElementById('additional_ingredients_list').innerHTML = '';
                 return;
             }
 
@@ -319,12 +322,19 @@
                     ingredientsList.innerHTML = '';
                     const ingredients = mealWeekData[`${day}_ingredients`];
                     if (ingredients && Array.isArray(ingredients)) {
-                        ingredients.forEach(async (itemId, index) => {
+                        ingredients.forEach(async (item, index) => {
                             addIngredient(day);
                             const container = ingredientsList.lastElementChild;
-                            const idInput = container.querySelector('input[type="number"]');
+                            const idInput = container.querySelector('input[type="number"][name$="_ingredients[]"]');
+                            const qtyInput = container.querySelector('input[type="number"][name$="_quantities[]"]');
                             const nameInput = container.querySelector('.ingredient-search');
+                            
+                            // Handle both old format (string) and new format (object)
+                            const itemId = typeof item === 'object' ? item.id : item;
+                            const itemQty = typeof item === 'object' ? item.qty : 1;
+                            
                             idInput.value = itemId;
+                            qtyInput.value = itemQty;
                             
                             // Fetch item name
                             try {
@@ -343,7 +353,40 @@
                         });
                     }
                 });
-                document.querySelector('textarea[name="additional_items"]').value = mealWeekData['additional_items'] || '';
+                
+                // Load additional items
+                const additionalList = document.getElementById('additional_ingredients_list');
+                additionalList.innerHTML = '';
+                const additionalItems = mealWeekData['additional_ingredients'];
+                if (additionalItems && Array.isArray(additionalItems)) {
+                    additionalItems.forEach(async (item, index) => {
+                        addIngredient('additional');
+                        const container = additionalList.lastElementChild;
+                        const idInput = container.querySelector('input[type="number"][name$="_ingredients[]"]');
+                        const qtyInput = container.querySelector('input[type="number"][name$="_quantities[]"]');
+                        const nameInput = container.querySelector('.ingredient-search');
+                        
+                        const itemId = typeof item === 'object' ? item.id : item;
+                        const itemQty = typeof item === 'object' ? item.qty : 1;
+                        
+                        idInput.value = itemId;
+                        qtyInput.value = itemQty;
+                        
+                        try {
+                            const response = await fetch('/pantry/directory/get_item', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                                body: `item_id=${itemId}`
+                            });
+                            const data = await response.json();
+                            if (data.name) {
+                                nameInput.value = data.name;
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    });
+                }
             });
         });
     }

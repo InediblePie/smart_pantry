@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Label</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        .buttons {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="buttons">
+        <button onclick="printLabel()">Print Label</button>
+        <button onclick="window.location.href='/pantry/intake'">Back to Intake</button>
+    </div>
+    
+    <p>Label ready to print. Click "Print Label" or the print dialog will open automatically.</p>
+    
+    <script>
+        const imageUrl = '/pantry/label/image?serial={{ serial }}&item_id={{ item_id }}&expiration_date={{ expiration_date }}';
+        
+        function printLabel() {
+            const printWindow = window.open(imageUrl, '_blank');
+            printWindow.onload = function() {
+                printWindow.print();
+            };
+        }
+        
+        // Auto-trigger print after page loads
+        window.onload = function() {
+            setTimeout(printLabel, 500);
+        };
+    </script>
+</body>
+</html>

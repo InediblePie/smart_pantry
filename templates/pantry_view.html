@@ -3,6 +3,36 @@
 {% block content %}
 <h2 class="text-center mb-4">Pantry Inventory</h2>
 
+<!-- Quick Delete Section -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">Delete by Serial</div>
+            <div class="card-body">
+                <form method="POST" action="/pantry/delete_by_serial">
+                    <div class="input-group">
+                        <input type="number" class="form-control" name="serial" placeholder="Scan or enter serial number" required>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">Delete Oldest by ID</div>
+            <div class="card-body">
+                <form method="POST" action="/pantry/delete_oldest_by_id">
+                    <div class="input-group">
+                        <input type="number" class="form-control" name="item_id" placeholder="Enter item ID" required>
+                        <button type="submit" class="btn btn-danger">Delete Oldest</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Serial Lookup and Item Count Section -->
 <div class="row mb-4">
     <div class="col-md-6">

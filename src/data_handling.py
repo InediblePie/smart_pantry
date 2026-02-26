@@ -35,7 +35,7 @@ class MealDB:
             """, (week, dumps(data)))
             self.conn.commit()
     
-    def load_week(self, week: str) -> dict[str, str] | None:
+    def load_week(self, week: str) -> dict[str, map] | None:
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT data FROM meal_weeks WHERE week = %s", (week,))
             result = cur.fetchone()
@@ -126,7 +126,7 @@ class PantryDB:
             self.conn.commit()
     
     # Add an item to the pantry using its ID from the pantry directory and an expiration date
-    def add_item(self, pdpb: PantryDirectoryDB, item_id: int, expiration_date: str) -> None:
+    def add_item(self, pdpb: PantryDirectoryDB, item_id: int, expiration_date: str) -> int:
         with self.conn.cursor() as cur:
             item = pdpb.get_item_by_id(item_id)
             if not item:
@@ -139,7 +139,7 @@ class PantryDB:
                         VALUES (%s, %s, %s, %s, %s)
                     """, (serial, item['id'], item['name'], item['category'], expiration_date))
                     self.conn.commit()
-                    break
+                    return serial
                 except psycopg2.IntegrityError:
                     self.conn.rollback()
                     continue
@@ -170,3 +170,13 @@ class PantryDB:
             if result:
                 return dict(result)
             return None
+    
+    # Remove the oldest item by item ID (based on expiration date)
+    def remove_oldest_by_id(self, item_id: int) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM pantry WHERE serial = (
+                    SELECT serial FROM pantry WHERE id = %s ORDER BY expiration_date ASC LIMIT 1
+                )
+            """, (item_id,))
+            self.conn.commit()
