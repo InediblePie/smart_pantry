@@ -4,14 +4,23 @@ Simple Flask app to plan weekly meals, manage pantry/shopping items, and export 
 
 ## Features
 - Select a week via calendar UI
-- Enter meals and per-day ingredient lists
+- Enter meals with recipe links and ingredient lists
+- Dynamic ingredient search with autocomplete from pantry directory
+- Quantity tracking for each ingredient
 - Save/load weekly plans (PostgreSQL-backed)
-- Add additional shopping items
-- Export consolidated shopping list as a PDF
+- Add additional shopping items with quantities
+- Export consolidated shopping list as a PDF with two sections:
+  - "Shopping List" - items to purchase (including additional items)
+  - "Check Item Stock" - items with low inventory
 - Manage pantry inventory with expiration tracking
-- Pantry directory with unique item IDs
+- Pantry directory with unique 10-digit item IDs
 - Item intake system for adding items to pantry
+- Automatic 4x6 inch label generation with barcodes (serial and item ID)
 - Search, sort, and filter pantry items
+- Quick delete functions:
+  - Delete by serial number (scan or enter)
+  - Delete oldest item by ID
+- Dark theme UI with Bootstrap 5
 
 ## Prerequisites
 - Python 3.11+
@@ -66,18 +75,57 @@ Build and run:
 - POST /pantry/intake/add — add item to pantry
 - POST /pantry/directory/add — add item to directory
 - POST /pantry/directory/delete — delete item from directory
+- POST /pantry/directory/get_item — get item details by ID
+- GET /pantry/directory/search — search directory items by name
 - GET /pantry — pantry inventory view
 - POST /pantry/get_by_serial — lookup item by serial number
 - POST /pantry/get_count — get count of items by ID
-- POST /pantry/delete — delete item from pantry
+- POST /pantry/delete — delete item from pantry by serial
+- POST /pantry/delete_by_serial — quick delete by serial number
+- POST /pantry/delete_oldest_by_id — delete oldest item by ID
+- GET /pantry/label — label print page
+- GET /pantry/label/image — generate label image with barcodes
 
 ## Project layout
 - app.py — Flask application
 - templates/
-  - base.html — base template with navigation
-  - meal_planning.html — weekly meal planner UI
+  - base.html — base template with navigation and dark theme
+  - meal_planning.html — weekly meal planner UI with dynamic ingredients
   - pantry_intake.html — item intake and directory management
-  - pantry_view.html — pantry inventory view
+  - pantry_view.html — pantry inventory view with quick delete functions
+  - label_print.html — label printing page
 - src/data_handling.py — PostgreSQL persistence (MealDB, PantryDirectoryDB, PantryDB)
 - Dockerfile — container image
 - requirements.txt
+
+## Key Features Detail
+
+### Meal Planning
+- Calendar-based week selection
+- Per-day meal entry with optional recipe links
+- Dynamic ingredient lists with autocomplete search
+- Quantity tracking for each ingredient
+- Additional shopping items section with same functionality
+- Ingredients stored as objects: `{"id": "<item_id>", "qty": <quantity>}`
+
+### Pantry Management
+- Directory of items with unique 10-digit IDs and categories
+- Inventory tracking with serial numbers and expiration dates
+- Item intake with automatic label generation
+- Search, filter, and sort inventory
+- Serial lookup and item count functions
+- Quick delete by serial or by item ID (removes oldest)
+
+### Label System
+- 4x6 inch vertical labels at 300 DPI (1200x1800 pixels)
+- Code128 barcodes for serial and item ID
+- Displays expiration date and item name
+- Automatic print dialog on generation
+- Optimized barcode settings for scanner compatibility
+
+### Shopping List PDF
+- Two sections:
+  - "Shopping List" - items needed (pantry count < recipe quantity) + additional items
+  - "Check Item Stock" - items with exact match (pantry count = recipe quantity)
+- Checkbox format for easy shopping
+- Automatic pagination for long lists
