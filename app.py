@@ -2,7 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for, send_file
 from dotenv import load_dotenv
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+#from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.units import inch
+from reportlab.lib.utils import ImageReader
+from PIL import Image, ImageDraw, ImageFont
+import barcode
+from barcode.writer import ImageWriter
 from io import BytesIO
 import os
 
@@ -169,130 +174,139 @@ def pantry_intake():
 def add_pantry_item():
     item_id = request.form.get('item_id')
     expiration_date = request.form.get('expiration_date')
+    quantity = request.form.get('quantity', '1')
     
     if not item_id or not expiration_date:
         raise Exception('Item ID and expiration date are required')
     
     item_id = int(item_id)
-    serial = pdb.add_item(pddb, item_id, expiration_date)
+    quantity = int(quantity)
     
-    # Redirect to label generation page
-    return redirect(url_for('generate_label', serial=serial, item_id=item_id, expiration_date=expiration_date))
+    serials = []
+    for _ in range(quantity):
+        serial = pdb.add_item(pddb, item_id, expiration_date)
+        serials.append(serial)
+    
+    # Redirect to label generation page with all serials
+    return redirect(url_for('generate_label', serials=','.join(map(str, serials)), item_id=item_id, expiration_date=expiration_date))
 
 @app.route('/pantry/label')
 def generate_label():
-    serial = request.args.get('serial')
+    serials = request.args.get('serials')
     item_id = request.args.get('item_id')
     expiration_date = request.args.get('expiration_date')
     
-    if not serial or not item_id or not expiration_date:
+    if not serials or not item_id or not expiration_date:
         return redirect(url_for('pantry_intake'))
     
-    return render_template('label_print.html', serial=serial, item_id=item_id, expiration_date=expiration_date)
+    return render_template('label_print.html', serials=serials, item_id=item_id, expiration_date=expiration_date)
 
 @app.route('/pantry/label/image')
 def generate_label_image():
-    from PIL import Image, ImageDraw, ImageFont
-    import barcode
-    from barcode.writer import ImageWriter
-    
-    serial = request.args.get('serial')
+    serials = request.args.get('serials')
     item_id = request.args.get('item_id')
     expiration_date = request.args.get('expiration_date')
     
-    if not serial or not item_id or not expiration_date:
+    if not serials or not item_id or not expiration_date:
         raise Exception('Missing label parameters')
+    
+    serial_list = serials.split(',')
     
     # Get item name from database
     item = pddb.get_item_by_id(int(item_id))
     item_name = item['name'] if item else 'Unknown Item'
     
-    # Create label image (4x6 inches at 300 DPI - vertical layout)
-    width, height = 1200, 1800  # 4x6 inches at 300 DPI
-    img = Image.new('RGB', (width, height), 'white')
-    draw = ImageDraw.Draw(img)
-    
-    try:
-        font_huge = ImageFont.truetype('./static/Roboto-Bold.ttf', 120)
-        font_large = ImageFont.truetype('./static/Roboto-Bold.ttf', 80)
-        font_medium = ImageFont.truetype('./static/Roboto-Regular.ttf', 60)
-    except:
-        font_huge = ImageFont.load_default()
-        font_large = ImageFont.load_default()
-        font_medium = ImageFont.load_default()
-    
-    # Generate barcodes with optimal settings for scanning
-    CODE128 = barcode.get_barcode_class('code128')
-    
-    # Serial barcode
-    serial_barcode = CODE128(serial, writer=ImageWriter())
-    serial_barcode_img = serial_barcode.render({
-        'write_text': False,
-        'module_height': 25,
-        'module_width': 0.6,
-        'quiet_zone': 10
-    })
-    serial_barcode_img = serial_barcode_img.resize((1000, 300))
-    
-    # Item ID barcode
-    item_barcode = CODE128(item_id, writer=ImageWriter())
-    item_barcode_img = item_barcode.render({
-        'write_text': False,
-        'module_height': 25,
-        'module_width': 0.6,
-        'quiet_zone': 10
-    })
-    item_barcode_img = item_barcode_img.resize((1000, 300))
-    
-    # Vertical layout
-    x_center = width // 2
-    y_pos = 50
-    
-    # Serial section
-    text_bbox = draw.textbbox((0, 0), 'Serial:', font=font_large)
-    text_width = text_bbox[2] - text_bbox[0]
-    draw.text((x_center - text_width // 2, y_pos), 'Serial:', font=font_large, fill='black')
-    y_pos += 90
-    img.paste(serial_barcode_img, ((width - 1000) // 2, y_pos))
-    y_pos += 310
-    text_bbox = draw.textbbox((0, 0), serial, font=font_medium)
-    text_width = text_bbox[2] - text_bbox[0]
-    draw.text((x_center - text_width // 2, y_pos), serial, font=font_medium, fill='black')
-    
-    # Item ID section
-    y_pos += 100
-    text_bbox = draw.textbbox((0, 0), 'Item ID:', font=font_large)
-    text_width = text_bbox[2] - text_bbox[0]
-    draw.text((x_center - text_width // 2, y_pos), 'Item ID:', font=font_large, fill='black')
-    y_pos += 90
-    img.paste(item_barcode_img, ((width - 1000) // 2, y_pos))
-    y_pos += 310
-    text_bbox = draw.textbbox((0, 0), item_id, font=font_medium)
-    text_width = text_bbox[2] - text_bbox[0]
-    draw.text((x_center - text_width // 2, y_pos), item_id, font=font_medium, fill='black')
-    
-    # Expiration date
-    y_pos += 100
-    text_bbox = draw.textbbox((0, 0), 'Expires:', font=font_large)
-    text_width = text_bbox[2] - text_bbox[0]
-    draw.text((x_center - text_width // 2, y_pos), 'Expires:', font=font_large, fill='black')
-    y_pos += 90
-    text_bbox = draw.textbbox((0, 0), expiration_date, font=font_huge)
-    text_width = text_bbox[2] - text_bbox[0]
-    draw.text((x_center - text_width // 2, y_pos), expiration_date, font=font_huge, fill='black')
-    
-    # Item name at bottom
-    y_pos += 140
-    text_bbox = draw.textbbox((0, 0), item_name, font=font_large)
-    text_width = text_bbox[2] - text_bbox[0]
-    draw.text((x_center - text_width // 2, y_pos), item_name, font=font_large, fill='black')
-    
-    # Save to buffer
+    # Create PDF with multiple pages
     buffer = BytesIO()
-    img.save(buffer, format='PNG')
+    pdf = canvas.Canvas(buffer, pagesize=(4*inch, 6*inch))
+    #pdf = pdf_canvas.Canvas(buffer, pagesize=(4*inch, 6*inch))
+    
+    for serial in serial_list:
+        # Create label image (4x6 inches at 300 DPI - vertical layout)
+        width, height = 1200, 1800
+        img = Image.new('RGB', (width, height), 'white')
+        draw = ImageDraw.Draw(img)
+        
+        try:
+            font_huge = ImageFont.truetype('./static/Roboto-Bold.ttf', 120)
+            font_large = ImageFont.truetype('./static/Roboto-Bold.ttf', 80)
+            font_medium = ImageFont.truetype('./static/Roboto-Regular.ttf', 60)
+        except:
+            font_huge = ImageFont.load_default()
+            font_large = ImageFont.load_default()
+            font_medium = ImageFont.load_default()
+        
+        # Generate barcodes
+        CODE128 = barcode.get_barcode_class('code128')
+        
+        serial_barcode = CODE128(serial, writer=ImageWriter())
+        serial_barcode_img = serial_barcode.render({
+            'write_text': False,
+            'module_height': 25,
+            'module_width': 0.6,
+            'quiet_zone': 10
+        })
+        serial_barcode_img = serial_barcode_img.resize((1000, 300))
+        
+        item_barcode = CODE128(item_id, writer=ImageWriter())
+        item_barcode_img = item_barcode.render({
+            'write_text': False,
+            'module_height': 25,
+            'module_width': 0.6,
+            'quiet_zone': 10
+        })
+        item_barcode_img = item_barcode_img.resize((1000, 300))
+        
+        # Vertical layout
+        x_center = width // 2
+        y_pos = 50
+        
+        # Serial section
+        text_bbox = draw.textbbox((0, 0), 'Serial:', font=font_large)
+        text_width = text_bbox[2] - text_bbox[0]
+        draw.text((x_center - text_width // 2, y_pos), 'Serial:', font=font_large, fill='black')
+        y_pos += 90
+        img.paste(serial_barcode_img, ((width - 1000) // 2, y_pos))
+        y_pos += 310
+        text_bbox = draw.textbbox((0, 0), serial, font=font_medium)
+        text_width = text_bbox[2] - text_bbox[0]
+        draw.text((x_center - text_width // 2, y_pos), serial, font=font_medium, fill='black')
+        
+        # Item ID section
+        y_pos += 100
+        text_bbox = draw.textbbox((0, 0), 'Item ID:', font=font_large)
+        text_width = text_bbox[2] - text_bbox[0]
+        draw.text((x_center - text_width // 2, y_pos), 'Item ID:', font=font_large, fill='black')
+        y_pos += 90
+        img.paste(item_barcode_img, ((width - 1000) // 2, y_pos))
+        y_pos += 310
+        text_bbox = draw.textbbox((0, 0), item_id, font=font_medium)
+        text_width = text_bbox[2] - text_bbox[0]
+        draw.text((x_center - text_width // 2, y_pos), item_id, font=font_medium, fill='black')
+        
+        # Expiration date
+        y_pos += 100
+        text_bbox = draw.textbbox((0, 0), 'Expires:', font=font_large)
+        text_width = text_bbox[2] - text_bbox[0]
+        draw.text((x_center - text_width // 2, y_pos), 'Expires:', font=font_large, fill='black')
+        y_pos += 90
+        text_bbox = draw.textbbox((0, 0), expiration_date, font=font_huge)
+        text_width = text_bbox[2] - text_bbox[0]
+        draw.text((x_center - text_width // 2, y_pos), expiration_date, font=font_huge, fill='black')
+        
+        # Item name at bottom
+        y_pos += 140
+        text_bbox = draw.textbbox((0, 0), item_name, font=font_large)
+        text_width = text_bbox[2] - text_bbox[0]
+        draw.text((x_center - text_width // 2, y_pos), item_name, font=font_large, fill='black')
+        
+        pdf.drawImage(ImageReader(img), 0, 0, width=4*inch, height=6*inch)
+        pdf.showPage()
+    
+    pdf.save()
     buffer.seek(0)
     
-    return send_file(buffer, mimetype='image/png')
+    return send_file(buffer, as_attachment=True, download_name=f"labels_{item_id}.pdf", mimetype="application/pdf")
 
 # Route to add an item to the pantry directory
 @app.route('/pantry/directory/add', methods=['POST'])

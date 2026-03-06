@@ -30,16 +30,24 @@
         <button onclick="window.location.href='/pantry/intake'">Back to Intake</button>
     </div>
     
-    <p>Label ready to print. Click "Print Label" or the print dialog will open automatically.</p>
+    <p>Labels ready to print. Click "Print Label" or the print dialog will open automatically.</p>
     
     <script>
-        const imageUrl = '/pantry/label/image?serial={{ serial }}&item_id={{ item_id }}&expiration_date={{ expiration_date }}';
+        const pdfUrl = '/pantry/label/image?serials={{ serials }}&item_id={{ item_id }}&expiration_date={{ expiration_date }}';
         
         function printLabel() {
-            const printWindow = window.open(imageUrl, '_blank');
-            printWindow.onload = function() {
-                printWindow.print();
-            };
+            fetch(pdfUrl)
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = URL.createObjectURL(blob);
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = url;
+                    document.body.appendChild(iframe);
+                    iframe.onload = function() {
+                        iframe.contentWindow.print();
+                    };
+                });
         }
         
         // Auto-trigger print after page loads
