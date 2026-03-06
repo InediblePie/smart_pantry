@@ -117,6 +117,7 @@
                                     <td>{{ item.category }}</td>
                                     <td>{{ item.expiration_date }}</td>
                                     <td>
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="printLabel('{{ item.serial }}', '{{ item.id }}', '{{ item.expiration_date }}')">Print</button>
                                         <form method="POST" action="/pantry/delete" style="display:inline;">
                                             <input type="hidden" name="serial" value="{{ item.serial }}">
                                             <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this item?')">Delete</button>
@@ -138,6 +139,23 @@
 </div>
 
 <script>
+    function printLabel(serial, itemId, expirationDate) {
+        const pdfUrl = `/pantry/label/image?serials=${serial}&item_id=${itemId}&expiration_date=${expirationDate}`;
+        
+        fetch(pdfUrl)
+            .then(response => response.blob())
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = url;
+                document.body.appendChild(iframe);
+                iframe.onload = function() {
+                    iframe.contentWindow.print();
+                };
+            });
+    }
+    
     function filterTable() {
         const searchValue = document.getElementById('searchInput').value.toLowerCase();
         const rows = document.querySelectorAll('#pantryTableBody tr');

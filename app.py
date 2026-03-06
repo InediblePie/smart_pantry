@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, send_file
 from dotenv import load_dotenv
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-#from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from PIL import Image, ImageDraw, ImageFont
@@ -219,7 +218,6 @@ def generate_label_image():
     # Create PDF with multiple pages
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=(4*inch, 6*inch))
-    #pdf = pdf_canvas.Canvas(buffer, pagesize=(4*inch, 6*inch))
     
     for serial in serial_list:
         # Create label image (4x6 inches at 300 DPI - vertical layout)
@@ -366,11 +364,7 @@ def generate_shopping_list(week: str, check_items: list[str], items: list[str]) 
     pdf = canvas.Canvas(buffer, pagesize=letter)
     pdf.setTitle(f"Shopping List - Week {week}")
     
-    # pdf.setFont("Helvetica-Bold", 16)
-    # pdf.drawString(1 * inch, 10.5 * inch, f"Shopping List - Week {week}")
-    
     y_position = 10 * inch
-    # pdf.setFont("Helvetica", 12)
 
     # Section 1: Check Item Stock
     if len(items) > 0:
